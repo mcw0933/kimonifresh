@@ -47,8 +47,15 @@ namespace Fetcher
             queue.AddMessage(msg, timeSpan);
         }
 
+        internal int PeekMessages(int max)
+        {
+            return new List<CloudQueueMessage>(queue.PeekMessages(max)).Count;
+        }
+
         internal IEnumerable<PollTarget> FetchMessages(int max)
         {
+            // TODO: Rewrite such that a message isn't totally popped
+            // unless it succeeds (or gets put back if fails, etc)
             var messages = queue.GetMessages(max);
 
             var targets = new List<PollTarget>();
@@ -66,5 +73,7 @@ namespace Fetcher
             resultsTable.Execute(TableOperation.Insert(result));
         }
         #endregion
+
+        
     }
 }

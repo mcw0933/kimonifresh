@@ -18,6 +18,11 @@ namespace Fetcher
             return Localize(DateTimeOffset.UtcNow);
         }
 
+        internal static string CurrTimestamp()
+        {
+            return DateTimeOffset.UtcNow.Ticks.ToString("d19");
+        }
+
         internal static DateTimeOffset Localize(DateTimeOffset dt)
         {
             return dt.ToOffset(OFFSET);
@@ -38,5 +43,11 @@ namespace Fetcher
         }
 
         public static string Id { get { return RoleEnvironment.CurrentRoleInstance.Id; } }
+    }
+
+    class Kimono
+    {
+        public static string Host { get { return RoleEnvironment.GetConfigurationSettingValue("KimonoHostName"); } }
+        public static string Key { get { return RoleEnvironment.GetConfigurationSettingValue("KimonoAPIKey"); } }
     }
 }
