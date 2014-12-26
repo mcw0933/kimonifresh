@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
-using Microsoft.WindowsAzure.ServiceRuntime;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -12,19 +13,33 @@ namespace Fetcher
         private static readonly Storage instance = new Storage();
         private static readonly CloudStorageAccount azure;
         private static readonly CloudQueue queue;
+        private static readonly CloudTable targetsTable;
         private static readonly CloudTable resultsTable;
+        private static readonly CloudTable lastResultTable;
+
+        internal static readonly TimeSpan QUEUE_TTL = TimeSpan.FromSeconds(60);
 
         // Explicit static constructor to tell C# compiler
         // not to mark type as beforefieldinit
         static Storage() {
-            var connStr = RoleEnvironment.GetConfigurationSettingValue("StorageAccount"); // LocalAzureStorageEmulator_PortOverrides 
+            var connStr = C.Setting("StorageAccount"); // LocalAzureStorageEmulator_PortOverrides 
             azure = CloudStorageAccount.Parse(connStr);
 
-            var queueName = RoleEnvironment.GetConfigurationSettingValue("PollRequestsQueue");
+            var queueName = C.Setting("PollRequestsQueue");
             queue = azure.CreateCloudQueueClient().GetQueueReference(queueName);
+            queue.CreateIfNotExists();
 
-            var name = RoleEnvironment.GetConfigurationSettingValue("PollResultsTable");
+            var name = C.Setting("PollTargetsTable");
+            targetsTable = azure.CreateCloudTableClient().GetTableReference(name);
+            targetsTable.CreateIfNotExists();
+
+            name = C.Setting("PollResultsTable");
             resultsTable = azure.CreateCloudTableClient().GetTableReference(name);
+            resultsTable.CreateIfNotExists();
+
+            name = C.Setting("LastResultTable");
+            lastResultTable = azure.CreateCloudTableClient().GetTableReference(name);
+            lastResultTable.CreateIfNotExists();
         } 
 
         private Storage() { }
@@ -33,23 +48,30 @@ namespace Fetcher
         #endregion
 
         #region Methods
-        internal IEnumerable<PollTarget> Query()
-        {
-            var name = RoleEnvironment.GetConfigurationSettingValue("PollTargetsTable");
-            var table = azure.CreateCloudTableClient().GetTableReference(name);
 
-            return table.ExecuteQuery<PollTarget>(new TableQuery<PollTarget>());
+        #region Targets - queue and table
+        internal IList<PollTarget> Query()
+        {
+            return targetsTable.ExecuteQuery<PollTarget>(new TableQuery<PollTarget>()).ToList();
         }
 
-        internal void AddMessage(PollTarget t, System.TimeSpan timeSpan)
+        internal void SaveMessages(IEnumerable<PollTarget> targets)
+        {
+            foreach (var t in targets)
+                AddMessage(t, (t.NextRun.HasValue) ? 
+                    t.NextRun.Value.AddMinutes(1) - C.CurrTime() : 
+                    QUEUE_TTL);
+        }
+
+        internal void AddMessage(PollTarget t, TimeSpan ttl)
         {
             var msg = new CloudQueueMessage(t.ToString());
-            queue.AddMessage(msg, timeSpan);
+            queue.AddMessage(msg, ttl);
         }
 
-        internal int PeekMessages(int max)
+        internal IList<CloudQueueMessage> PeekMessages(int max)
         {
-            return new List<CloudQueueMessage>(queue.PeekMessages(max)).Count;
+            return new List<CloudQueueMessage>(queue.PeekMessages(max));
         }
 
         internal IEnumerable<PollTarget> FetchMessages(int max)
@@ -68,12 +90,50 @@ namespace Fetcher
             return targets;
         }
 
-        internal void Insert(PollResult result)
+        internal void Update(PollTarget target)
         {
-            resultsTable.Execute(TableOperation.Insert(result));
+            target.ETag = "*";
+            var op = TableOperation.Replace(target);
+            targetsTable.Execute(op);
         }
         #endregion
 
-        
+        #region Results - table and feed
+
+        internal PollResult GetLast(string pKey)
+        {
+            var op = TableOperation.Retrieve<PollResult>(pKey, pKey);
+            var result = lastResultTable.Execute(op).Result as PollResult;
+
+            return result;
+        }
+
+        internal void AppendToFeed(PollResult result)
+        {
+            // TODO: implement here?  Implement in API?
+        }
+
+        internal void Insert(PollResult result)
+        {
+            // update results table
+            resultsTable.Execute(TableOperation.Insert(result));
+
+            // overwrite latest result
+            var last = GetLast(result.PartitionKey);
+
+            if (last == null)
+                last = new PollResult(result.PartitionKey)
+                {
+                    RowKey = result.PartitionKey,
+                    StatusCode = result.StatusCode,
+                    Content = FeedItem.FromXml(result.Content.ToString())
+                };
+
+            var op = TableOperation.InsertOrReplace(last);
+            lastResultTable.Execute(op);
+        }
+        #endregion
+
+        #endregion
     }
 }

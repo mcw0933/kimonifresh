@@ -98,6 +98,7 @@
     <Compile Include="Consts.cs" />
     <Compile Include="JToken_Extensions.cs" />
     <Compile Include="Lock.cs" />
+    <Compile Include="CheckJob.cs" />
     <Compile Include="PollJob.cs" />
     <Compile Include="PollResult.cs" />
     <Compile Include="PollTarget.cs" />

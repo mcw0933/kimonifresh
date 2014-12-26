@@ -100,5 +100,14 @@ namespace Fetcher
 
             context.Scheduler.RescheduleJob(key, trigger);
         }
+
+        internal static void FireNow(IScheduler sched, string jobId)
+        {
+            foreach (var j in sched.GetCurrentlyExecutingJobs())
+            {
+                if (j.JobDetail.Key.Name == jobId)
+                    j.Scheduler.TriggerJob(j.JobDetail.Key);
+            }
+        }
     }
 }

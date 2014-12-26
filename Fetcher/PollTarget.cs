@@ -7,21 +7,19 @@ namespace Fetcher
 {
     internal class PollTarget : TableEntity
     {
-        #region Consts
-        private static readonly string PARTITION_KEY = "PollTarget";
-        #endregion
-
         #region Constructor
         public PollTarget()
         {
-            PartitionKey = PARTITION_KEY;
-            RowKey = Guid.NewGuid().ToString();
+            PartitionKey = Guid.NewGuid().ToString();
+            RowKey = PartitionKey;
             Schedule = Schedule.HOURLY;
         }
         #endregion
 
         #region Props
-        public Uri Uri { get; set; }
+        public FeedId Name { get { return PartitionKey; } set { if (!string.IsNullOrWhiteSpace(value)) PartitionKey = value; } }
+
+        public Uri Source { get; set; }
 
         public Schedule Schedule { get; set; }
 
@@ -33,12 +31,14 @@ namespace Fetcher
         #region Azure
         public override void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
+            base.ReadEntity(properties, operationContext);
+
             foreach (var kv in properties)
             {
                 switch (kv.Key.ToLower())
                 {
-                    case "uri":
-                        Uri = new Uri(kv.Value.StringValue);
+                    case "source":
+                        Source = new Uri(kv.Value.StringValue);
                         break;
 
                     case "schedule":
@@ -54,11 +54,23 @@ namespace Fetcher
                 }
             }
         }
+
+        public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
+        {
+            var dict = base.WriteEntity(operationContext);
+
+            C.Extend(dict, "Source", new EntityProperty(Source.AbsoluteUri));
+            C.Extend(dict, "Schedule", new EntityProperty(Schedule.ToString()));
+            C.Extend(dict, "NextRun", new EntityProperty(NextRun));
+
+            return dict;
+        }
+
         #endregion
 
         public override string ToString()
         {
-            return string.Join(C.SEPARATOR, Uri, Schedule, NextRun, RowKey);
+            return string.Join(C.SEPARATOR, Name, Source, Schedule, NextRun);
         }
 
         public static PollTarget ParseFromString(string s)
@@ -66,16 +78,16 @@ namespace Fetcher
             var pieces = s.Split(C.SEPARATOR.ToCharArray());
             DateTimeOffset? nextRun = null;
             DateTimeOffset temp;
-            if (DateTimeOffset.TryParse(pieces[2], out temp))
+            if (DateTimeOffset.TryParse(pieces[3], out temp))
                 nextRun = temp;
 
             return new PollTarget()
             {
-                PartitionKey = PARTITION_KEY,
-                Uri = new Uri(pieces[0]),
-                Schedule = pieces[1],
-                NextRun = nextRun,
-                RowKey = pieces[3]
+                PartitionKey = pieces[0],
+                RowKey = pieces[0],
+                Source = new Uri(pieces[1]),
+                Schedule = pieces[2],
+                NextRun = nextRun
             };
         }
         #endregion

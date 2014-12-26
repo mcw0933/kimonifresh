@@ -1,12 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
+using Microsoft.WindowsAzure.Storage.Table;
 namespace Fetcher
 {
     class C
     {
-        internal static readonly string SEPARATOR = "\r\n";
+        internal static readonly string SEPARATOR = "\n";
         internal static readonly TimeSpan OFFSET = new TimeSpan(-5, 0, 0);
+        internal const int TO_MILLI = 1000;
+
+        internal static string Setting(string name)
+        {
+            return RoleEnvironment.GetConfigurationSettingValue(name);
+        }
 
         internal static string FormatErrorMsg(Exception ex)
         {
@@ -43,11 +51,19 @@ namespace Fetcher
         }
 
         public static string Id { get { return RoleEnvironment.CurrentRoleInstance.Id; } }
+
+        internal static void Extend(IDictionary<string, EntityProperty> dict, string name, EntityProperty prop)
+        {
+            if (dict.ContainsKey(name))
+                dict[name] = prop;
+            else
+                dict.Add(name, prop);
+        }
     }
 
     class Kimono
     {
-        public static string Host { get { return RoleEnvironment.GetConfigurationSettingValue("KimonoHostName"); } }
-        public static string Key { get { return RoleEnvironment.GetConfigurationSettingValue("KimonoAPIKey"); } }
+        public static string Host { get { return C.Setting("KimonoHostName"); } }
+        public static string Key { get { return C.Setting("KimonoAPIKey"); } }
     }
 }

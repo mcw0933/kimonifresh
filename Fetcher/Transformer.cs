@@ -14,18 +14,23 @@ namespace Fetcher
                 if (post.Type == JTokenType.Array)
                     post = post[0];
 
-                if (post.HasValues)
-                    return new FeedItem()
-                    {
-                        //Id = id,
-                        Uri = new Uri(post.Str("url")),
-                        Title = post.Str("title"),
-                        //Authors = post.Str("authors").Split(','),
-                        Content = FormatImage(post["image"]),
-                        PublishTime = post.Dto("date"),
-                        LastUpdateTime = wrapper.Dto("lastsuccess"),
-                        NextPollAfter = wrapper.Dto("nextrun")
-                    };
+                if (post.HasValues) {
+                    var uri = post.Str("url");
+
+                    return string.IsNullOrWhiteSpace(uri) ?
+                        null :
+                        new FeedItem() {
+                            //Id = id,
+                            Uri = new Uri(uri),
+                            Title = post.Str("title"),
+                            //Authors = post.Str("authors").Split(','),
+                            Description = post.Str("description"),
+                            Content = FormatImage(post["image"]),
+                            PublishTime = post.Dto("date"),
+                            LastUpdateTime = wrapper.Dto("lastsuccess"),
+                            NextPollAfter = wrapper.Dto("nextrun")
+                        };
+                }
             }
             catch (Exception ex)
             {

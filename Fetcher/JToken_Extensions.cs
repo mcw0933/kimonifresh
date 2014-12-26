@@ -12,10 +12,10 @@ namespace Fetcher
 
         public static DateTimeOffset Dto(this JToken j, string field)
         {
-            var str = j[field].Value<string>();
+            var str = Str(j, field);
             DateTimeOffset dt;
 
-            if (DateTimeOffset.TryParse(str, out dt))
+            if (!string.IsNullOrWhiteSpace(str) && DateTimeOffset.TryParse(str, out dt))
                 return dt;
 
             return DateTimeOffset.MinValue;

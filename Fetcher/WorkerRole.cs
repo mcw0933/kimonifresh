@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Net;
 using System.Threading;
-using Microsoft.ServiceBus;
-using Microsoft.ServiceBus.Messaging;
-using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Quartz;
 using Quartz.Impl;
@@ -13,8 +9,8 @@ namespace Fetcher
     public class WorkerRole : RoleEntryPoint
     {
         #region Members
-        QueueClient queue; // QueueClient is thread-safe.  Recommended to cache rather than recreate.
         ManualResetEvent completed = new ManualResetEvent(false);
+        IScheduler sched = new StdSchedulerFactory().GetScheduler();
         #endregion
 
         // TO CONFIGURE DIAGNOSTICS:
@@ -22,112 +18,99 @@ namespace Fetcher
         // Right-click the role (under Roles), Properties - Configuration, check Enable Diagnostics, provide
         // a ConnectionString (or use UseDevelopmentStorage=true)
 
-        private void ProcessMessage(BrokeredMessage newMsg)
-        {
-            C.Log("Processing Service Bus message: " + newMsg.SequenceNumber);
-
-            var schedule = newMsg.GetBody<PollTarget>();
-
-            ScheduleJob(schedule);
-
-            while (true)
-            {
-                Thread.Sleep(10000);
-                C.Log("Working...", "Information");
-            }
-        }
-
-        #region Job scheduling
-        private void ScheduleJob(PollTarget t)
-        {
-            var websitePingJobDetail = JobBuilder.Create<PollJob>()
-                    .WithIdentity("WebsitePingJob", "group1")
-                    .WithDescription("Website Ping Job")
-                    .UsingJobData(new JobDataMap())
-                    .Build();
-
-            var websitePingJobTrigger = TriggerBuilder.Create()
-                .WithIdentity("WebsitePingJob", "group1")
-                .StartAt(DateBuilder.EvenMinuteDate(C.CurrTime()))
-                .WithCronSchedule(RoleEnvironment.GetConfigurationSettingValue("Minutely"))
-                .StartNow()
-                .Build();
-
-            var sched = new StdSchedulerFactory().GetScheduler();
-            sched.Start();
-            sched.ScheduleJob(websitePingJobDetail, websitePingJobTrigger);
-        }
-        #endregion
-
-
-        #region Worker Role Events / Interface
-
-        public override bool OnStart()
-        {
-            try
-            {
-                Lock.Init();
-
-                // Set the maximum number of concurrent connections 
-                ServicePointManager.DefaultConnectionLimit = 12;
-
-                // Create the queue if it does not exist already
-                var connectionString = CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString");
-                var namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
-
-                var queueName = RoleEnvironment.GetConfigurationSettingValue("PollRequestsQueue");
-                if (!namespaceManager.QueueExists(queueName))
-                {
-                    namespaceManager.CreateQueue(queueName);
-                }
-
-                // Initialize the connection to Service Bus Queue
-                queue = QueueClient.CreateFromConnectionString(connectionString, queueName);
-                return base.OnStart();
-            }
-            catch (Exception ex)
-            {
-                C.Log("Error during startup: ", ex);
-                return false;
-            }
-        }
-
         public override void Run()
         {
             C.Log("Starting processing of messages...");
 
-            // Initiates the message pump,
-            // callback is invoked for each message that is received, 
-            // calling close on the client will stop the pump.
-            queue.OnMessage((newMsg) =>
-            {
-                try
-                {
-                    ProcessMessage(newMsg);
-                }
-                catch (Exception ex)
-                {
-                    C.Log("Error processing message {0}: ", ex, newMsg.SequenceNumber);
-                }
-            });
+            var group = C.Setting("JobGroup");
+            var id = C.Id;
 
+            sched.Start();
 
+            RunPollJob(group, id);
+            RunTargetCheckJob(group, id);
 
-            // TODO: REMOVE after Testing
-            ScheduleJob(null);
-
-
+            // once scheduled, the job will periodically reschedule itself,
+            // so the main process loop is between sched and PollJob.Execute
 
             completed.WaitOne();
+        }
+
+        private void RunPollJob(string group, string id)
+        {
+            if (sched.IsStarted)
+            {
+                var job = JobBuilder.Create<PollJob>()
+                        .WithIdentity("PollJob:" + id, group)
+                        .WithDescription("Source Feed Targets Poll Job")
+                        .UsingJobData(new JobDataMap())
+                        .Build();
+
+                var trigger = TriggerBuilder.Create()
+                    .WithIdentity("PollJob:" + id, group)
+                    .WithCronSchedule(C.Setting("Minutely"))
+                    .StartNow()
+                    .Build();
+
+                sched.ScheduleJob(job, trigger);
+            }
+            else
+                C.Log("Scheduler has not started!");
+        }
+
+        private void RunTargetCheckJob(string group, string id)
+        {
+            if (sched.IsStarted)
+            {
+                var job = JobBuilder.Create<CheckJob>()
+                        .WithIdentity("CheckJob:" + id, group)
+                        .WithDescription("New Source Feed Targets Check Job")
+                        .UsingJobData(new JobDataMap())
+                        .Build();
+
+                var trigger = TriggerBuilder.Create()
+                    .WithIdentity("CheckJob:" + id, group)
+                    .WithCronSchedule(C.Setting("TargetCheckSchedule"))
+                    .StartNow()
+                    .Build();
+
+                sched.ScheduleJob(job, trigger);
+            }
+            else
+                C.Log("Scheduler has not started!");
+        }
+
+        #region Start / Stop
+
+        public override bool OnStart()
+        {
+            var ready = false;
+
+            try
+            {
+                if (base.OnStart())
+                {
+                    Lock.Init();
+                    CheckJob.WriteInitialTargets();
+                    ready = true;
+                }
+                else
+                    C.Log("Base role failed to start!");
+            }
+            catch (Exception ex)
+            {
+                C.Log("Error during startup: ", ex);
+            }
+
+            return ready;
         }
 
         public override void OnStop()
         {
             try
             {
-                // Close the connection to Service Bus Queue
-                queue.Close();
                 completed.Set();
+                sched.Shutdown(false);
                 base.OnStop();
             }
             catch (Exception ex)
@@ -136,13 +119,6 @@ namespace Fetcher
             }
         }
 
-        #endregion
-
-        #region Setup
-        private void Init()
-        {
-            
-        }
         #endregion
     }
 }

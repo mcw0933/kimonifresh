@@ -18,20 +18,20 @@ namespace Fetcher
         static Lock() {
             try
             {
-                var connStr = RoleEnvironment.GetConfigurationSettingValue("StorageAccount"); // LocalAzureStorageEmulator_PortOverrides 
+                var connStr = C.Setting("StorageAccount"); // LocalAzureStorageEmulator_PortOverrides 
                 var storageAccount = CloudStorageAccount.Parse(connStr);
 
                 var lockContainer = storageAccount.CreateCloudBlobClient().GetContainerReference(
-                    RoleEnvironment.GetConfigurationSettingValue("LockBlobContainer"));
+                    C.Setting("LockBlobContainer"));
                 lockContainer.CreateIfNotExists();
 
-                lockBlob = lockContainer.GetBlockBlobReference(RoleEnvironment.GetConfigurationSettingValue("LockBlob"));
+                lockBlob = lockContainer.GetBlockBlobReference(C.Setting("LockBlob"));
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("LOCK")))
                 {
                     lockBlob.UploadFromStream(stream);
                 }
 
-                var results = storageAccount.CreateCloudTableClient().GetTableReference(RoleEnvironment.GetConfigurationSettingValue("PollResultsTable"));
+                var results = storageAccount.CreateCloudTableClient().GetTableReference(C.Setting("PollResultsTable"));
                 results.CreateIfNotExists();
             }
             catch (Exception ex)
@@ -52,7 +52,7 @@ namespace Fetcher
         {
             try
             {
-                lockBlob.AcquireLease(TimeSpan.FromSeconds(45), null);
+                lockBlob.AcquireLease(Storage.QUEUE_TTL, null);
                 return true;
             }
             catch (Exception ex)

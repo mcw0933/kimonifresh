@@ -55,6 +55,11 @@ namespace Fetcher
             return new FeedId() { id = s };
         }
 
+        public static implicit operator string(FeedId i)
+        {
+            return i.id;
+        }
+
         public override string ToString()
         {
             return id;

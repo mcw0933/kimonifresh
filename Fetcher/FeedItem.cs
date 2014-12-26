@@ -30,6 +30,12 @@ namespace Fetcher
             set { entry.Title = new AtomTextConstruct(value); }
         }
 
+        public string Description
+        {
+            get { return (entry.Summary == null) ? string.Empty : entry.Summary.Content; }
+            set { entry.Summary = new AtomTextConstruct(value); }
+        }
+
         public string Content {
             get { return (entry.Content == null) ? string.Empty : entry.Content.Content; }
             set { entry.Content = new AtomContent(value); }
@@ -55,6 +61,21 @@ namespace Fetcher
             }
 
             return sb.ToString();
+        }
+
+        public static FeedItem FromXml(string xml)
+        {
+            var item = new FeedItem();
+
+            using (var sr = new StringReader(xml))
+            {
+                using (var xr = XmlReader.Create(sr))
+                {
+                    item.entry.Load(xr);
+                }
+            }
+
+            return item;
         }
     }
 
