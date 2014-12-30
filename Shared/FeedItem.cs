@@ -7,7 +7,7 @@ using Argotic.Syndication;
 
 namespace Fetcher
 {
-    internal class FeedItem
+    public class FeedItem
     {
         private AtomEntry entry;
 
@@ -79,7 +79,7 @@ namespace Fetcher
         }
     }
 
-    internal class ItemId
+    public class ItemId
     {
         private string id = string.Empty;
 

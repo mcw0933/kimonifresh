@@ -17,7 +17,7 @@ namespace Fetcher
         private static readonly CloudTable resultsTable;
         private static readonly CloudTable lastResultTable;
 
-        internal static readonly TimeSpan QUEUE_TTL = TimeSpan.FromSeconds(60);
+        public static readonly TimeSpan QUEUE_TTL = TimeSpan.FromSeconds(60);
 
         // Explicit static constructor to tell C# compiler
         // not to mark type as beforefieldinit
@@ -50,12 +50,12 @@ namespace Fetcher
         #region Methods
 
         #region Targets - queue and table
-        internal IList<PollTarget> Query()
+        public IList<PollTarget> Query()
         {
             return targetsTable.ExecuteQuery<PollTarget>(new TableQuery<PollTarget>()).ToList();
         }
 
-        internal void SaveMessages(IEnumerable<PollTarget> targets)
+        public void SaveMessages(IEnumerable<PollTarget> targets)
         {
             foreach (var t in targets)
                 AddMessage(t, (t.NextRun.HasValue) ? 
@@ -63,18 +63,18 @@ namespace Fetcher
                     QUEUE_TTL);
         }
 
-        internal void AddMessage(PollTarget t, TimeSpan ttl)
+        public void AddMessage(PollTarget t, TimeSpan ttl)
         {
             var msg = new CloudQueueMessage(t.ToString());
             queue.AddMessage(msg, ttl);
         }
 
-        internal IList<CloudQueueMessage> PeekMessages(int max)
+        public IList<CloudQueueMessage> PeekMessages(int max)
         {
             return new List<CloudQueueMessage>(queue.PeekMessages(max));
         }
 
-        internal IEnumerable<PollTarget> FetchMessages(int max)
+        public IEnumerable<PollTarget> FetchMessages(int max)
         {
             // TODO: Rewrite such that a message isn't totally popped
             // unless it succeeds (or gets put back if fails, etc)
@@ -90,7 +90,7 @@ namespace Fetcher
             return targets;
         }
 
-        internal void Update(PollTarget target)
+        public void Update(PollTarget target)
         {
             target.ETag = "*";
             var op = TableOperation.Replace(target);
@@ -100,7 +100,7 @@ namespace Fetcher
 
         #region Results - table and feed
 
-        internal PollResult GetLast(string pKey)
+        public PollResult GetLast(string pKey)
         {
             var op = TableOperation.Retrieve<PollResult>(pKey, pKey);
             var result = lastResultTable.Execute(op).Result as PollResult;
@@ -108,12 +108,12 @@ namespace Fetcher
             return result;
         }
 
-        internal void AppendToFeed(PollResult result)
+        public void AppendToFeed(PollResult result)
         {
             // TODO: implement here?  Implement in API?
         }
 
-        internal void Insert(PollResult result)
+        public void Insert(PollResult result)
         {
             // update results table
             resultsTable.Execute(TableOperation.Insert(result));

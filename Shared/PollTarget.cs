@@ -5,7 +5,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Fetcher
 {
-    internal class PollTarget : TableEntity
+    public class PollTarget : TableEntity
     {
         #region Constructor
         public PollTarget()

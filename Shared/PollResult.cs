@@ -6,7 +6,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Fetcher
 {
-    internal class PollResult : TableEntity
+    public class PollResult : TableEntity
     {
         #region Constructor
         public PollResult() { } // needed for TableEntity

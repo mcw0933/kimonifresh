@@ -3,9 +3,9 @@ using Quartz;
 
 namespace Fetcher
 {
-    class Time
+    public class Time
     {
-        internal static DateTimeOffset NextRunFor(Schedule sched)
+        public static DateTimeOffset NextRunFor(Schedule sched)
         {
             var s = sched.ToString();
             var now = C.CurrTime();
@@ -72,14 +72,13 @@ namespace Fetcher
         }
     }
 
-    internal class Schedule
+    public class Schedule
     {
         public const string HOURLY = "Hourly";
         public const string DAILY = "Daily";
         public const string MWF = "MWF";
         public const string WEEKDAILY = "Weekdaily";
         public const string WEEKLY = "Weekly";
-        
 
         private string sched = HOURLY;
 
@@ -93,7 +92,7 @@ namespace Fetcher
             return sched;
         }
 
-        internal static void For(DateTimeOffset nextCheck, IJobExecutionContext context)
+        public static void For(DateTimeOffset nextCheck, IJobExecutionContext context)
         {
             var key = context.Trigger.Key;
             var trigger = context.Trigger.GetTriggerBuilder().StartAt(nextCheck).Build();
@@ -101,7 +100,7 @@ namespace Fetcher
             context.Scheduler.RescheduleJob(key, trigger);
         }
 
-        internal static void FireNow(IScheduler sched, string jobId)
+        public static void FireNow(IScheduler sched, string jobId)
         {
             foreach (var j in sched.GetCurrentlyExecutingJobs())
             {

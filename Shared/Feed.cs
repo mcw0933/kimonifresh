@@ -5,9 +5,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Fetcher
 {
-    class Feed
+    public class Feed
     {
-        internal static FeedItem ProcessJsonStream(ItemId id, Func<ItemId, JObject, FeedItem> transform, Stream stream)
+        public static FeedItem ProcessJsonStream(ItemId id, Func<ItemId, JObject, FeedItem> transform, Stream stream)
         {
             try
             {
@@ -46,7 +46,7 @@ namespace Fetcher
         }
     }
 
-    internal class FeedId
+    public class FeedId
     {
         private string id = string.Empty;
 

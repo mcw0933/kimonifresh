@@ -13,6 +13,8 @@ Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "Azure", "Azure\Azure.ccproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fetcher", "Fetcher\Fetcher.csproj", "{28F8B05E-192E-4EAD-9A9B-BF503171D88E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{6CA8AB84-A61D-4D7F-B23C-1040F56BCFCA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,10 @@ Global
 		{28F8B05E-192E-4EAD-9A9B-BF503171D88E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{28F8B05E-192E-4EAD-9A9B-BF503171D88E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{28F8B05E-192E-4EAD-9A9B-BF503171D88E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6CA8AB84-A61D-4D7F-B23C-1040F56BCFCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6CA8AB84-A61D-4D7F-B23C-1040F56BCFCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6CA8AB84-A61D-4D7F-B23C-1040F56BCFCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6CA8AB84-A61D-4D7F-B23C-1040F56BCFCA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

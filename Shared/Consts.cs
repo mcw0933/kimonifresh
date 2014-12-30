@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Storage.Table;
+
 namespace Fetcher
 {
-    class C
+    public class C
     {
         internal static readonly string SEPARATOR = "\n";
         internal static readonly TimeSpan OFFSET = new TimeSpan(-5, 0, 0);
-        internal const int TO_MILLI = 1000;
+        public const int TO_MILLI = 1000;
 
-        internal static string Setting(string name)
+        public static string Setting(string name)
         {
             return RoleEnvironment.GetConfigurationSettingValue(name);
         }
@@ -21,7 +22,7 @@ namespace Fetcher
             return ex.Message;
         }
 
-        internal static DateTimeOffset CurrTime()
+        public static DateTimeOffset CurrTime()
         {
             return Localize(DateTimeOffset.UtcNow);
         }
@@ -36,12 +37,12 @@ namespace Fetcher
             return dt.ToOffset(OFFSET);
         }
 
-        internal static void Log(string message, Exception ex, params object[] values)
+        public static void Log(string message, Exception ex, params object[] values)
         {
             Log(message + C.FormatErrorMsg(ex), values);
         }
 
-        internal static void Log(string message, params object[] values)
+        public static void Log(string message, params object[] values)
         {
             var logFormat = string.Format("[{0}] - {1}", C.CurrTime(), message);
             //Console.WriteLine(logFormat, values);
@@ -61,7 +62,7 @@ namespace Fetcher
         }
     }
 
-    class Kimono
+    public class Kimono
     {
         public static string Host { get { return C.Setting("KimonoHostName"); } }
         public static string Key { get { return C.Setting("KimonoAPIKey"); } }
