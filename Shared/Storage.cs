@@ -132,6 +132,12 @@ namespace Fetcher
             var op = TableOperation.InsertOrReplace(last);
             lastResultTable.Execute(op);
         }
+
+        public IList<PollResult> Read(FeedId feed)
+        {
+            var query = resultsTable.CreateQuery<PollResult>().Where(f => f.PartitionKey == feed.ToString());
+            return query.ToList();
+        }
         #endregion
 
         #endregion

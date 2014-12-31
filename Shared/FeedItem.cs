@@ -77,6 +77,8 @@ namespace Fetcher
 
             return item;
         }
+
+        public AtomEntry Entry { get { return entry; } }
     }
 
     public class ItemId

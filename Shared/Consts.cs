@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Storage.Table;
 
@@ -14,7 +15,8 @@ namespace Fetcher
 
         public static string Setting(string name)
         {
-            return RoleEnvironment.GetConfigurationSettingValue(name);
+            //return RoleEnvironment.GetConfigurationSettingValue(name);
+            return CloudConfigurationManager.GetSetting(name);
         }
 
         internal static string FormatErrorMsg(Exception ex)
