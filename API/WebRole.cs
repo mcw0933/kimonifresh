@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.Diagnostics;
+using System.Diagnostics;
+using Shared;
 using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace API
@@ -11,6 +8,9 @@ namespace API
     {
         public override bool OnStart()
         {
+            C.Log("Starting web role, switching to warning logging only...");
+            RoleEnvironment.TraceSource.Switch.Level = SourceLevels.Warning;
+
             // For information on handling configuration changes
             // see the MSDN topic at http://go.microsoft.com/fwlink/?LinkId=166357.
 

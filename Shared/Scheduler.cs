@@ -1,7 +1,7 @@
 ﻿using System;
 using Quartz;
 
-namespace Fetcher
+namespace Shared
 {
     public class Time
     {
@@ -102,11 +102,20 @@ namespace Fetcher
 
         public static void FireNow(IScheduler sched, string jobId)
         {
+            var fired = false;
+
             foreach (var j in sched.GetCurrentlyExecutingJobs())
             {
                 if (j.JobDetail.Key.Name == jobId)
+                {
+                    C.Log("Found poll job, firing...");
                     j.Scheduler.TriggerJob(j.JobDetail.Key);
+                    fired = true;
+                }
             }
+
+            if (!fired)
+                C.Log("Could not find a matching poll job...");
         }
     }
 }

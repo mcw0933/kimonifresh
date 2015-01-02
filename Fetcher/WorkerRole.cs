@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Quartz;
 using Quartz.Impl;
+using Shared;
 
 namespace Fetcher
 {
@@ -25,14 +27,17 @@ namespace Fetcher
             var group = C.Setting("JobGroup");
             var id = C.Id;
 
+            C.Log("Role has started to run, setting up job scheduler...");
             sched.Start();
 
+            C.Log("Setting up jobs...");
             RunPollJob(group, id);
             RunTargetCheckJob(group, id);
 
             // once scheduled, the job will periodically reschedule itself,
             // so the main process loop is between sched and PollJob.Execute
 
+            C.Log("Jobs are set.");
             completed.WaitOne();
         }
 
@@ -40,17 +45,21 @@ namespace Fetcher
         {
             if (sched.IsStarted)
             {
-                var job = JobBuilder.Create<PollJob>()
-                        .WithIdentity("PollJob:" + id, group)
-                        .WithDescription("Source Feed Targets Poll Job")
-                        .UsingJobData(new JobDataMap())
-                        .Build();
+                var jobId = "PollJob:" + id;
+                var desc = "Source Feed Targets Poll Job";
+                var freq = C.Setting("Minutely");
+
+                C.Log("Setting up poll job running with schedule {3} in group {0} with id {1} and description: {2}", group, jobId, desc, freq);
+
+                var job = PollJob.Create(jobId, group, desc);
 
                 var trigger = TriggerBuilder.Create()
-                    .WithIdentity("PollJob:" + id, group)
-                    .WithCronSchedule(C.Setting("Minutely"))
+                    .WithIdentity(jobId, group)
+                    .WithCronSchedule(freq)
                     .StartNow()
                     .Build();
+
+                C.Log("Job set to start at {0}, with next scheduled fire at {1}...", C.Localize(trigger.StartTimeUtc), C.Localize(trigger.GetNextFireTimeUtc()));
 
                 sched.ScheduleJob(job, trigger);
             }
@@ -58,21 +67,31 @@ namespace Fetcher
                 C.Log("Scheduler has not started!");
         }
 
+        
+
         private void RunTargetCheckJob(string group, string id)
         {
             if (sched.IsStarted)
             {
+                var jobId = "CheckJob:" + id;
+                var desc = "New Source Feed Targets Check Job";
+                var freq = C.Setting("TargetCheckSchedule");
+
+                C.Log("Setting up check job running with schedule {3} in group {0} with id {1} and description: {2}", group, jobId, desc, freq);
+
                 var job = JobBuilder.Create<CheckJob>()
-                        .WithIdentity("CheckJob:" + id, group)
-                        .WithDescription("New Source Feed Targets Check Job")
+                        .WithIdentity(jobId, group)
+                        .WithDescription(desc)
                         .UsingJobData(new JobDataMap())
                         .Build();
 
                 var trigger = TriggerBuilder.Create()
-                    .WithIdentity("CheckJob:" + id, group)
-                    .WithCronSchedule(C.Setting("TargetCheckSchedule"))
+                    .WithIdentity(jobId, group)
+                    .WithCronSchedule(freq)
                     .StartNow()
                     .Build();
+
+                C.Log("Job set to start at {0}, with next scheduled fire at {1}...", C.Localize(trigger.StartTimeUtc), C.Localize(trigger.GetNextFireTimeUtc()));
 
                 sched.ScheduleJob(job, trigger);
             }
@@ -86,11 +105,17 @@ namespace Fetcher
         {
             var ready = false;
 
+            C.Log("Starting worker role, switching to warning logging only...");
+            RoleEnvironment.TraceSource.Switch.Level = SourceLevels.Warning;
+
             try
             {
                 if (base.OnStart())
                 {
+                    C.Log("Initializing lock...");
                     Lock.Init();
+
+                    C.Log("Writing initial queue targets...");
                     CheckJob.WriteInitialTargets();
                     ready = true;
                 }
@@ -109,9 +134,16 @@ namespace Fetcher
         {
             try
             {
+                C.Log("Role is shutting down, winding down...");
                 completed.Set();
+
+                C.Log("Stopping scheduler...");
                 sched.Shutdown(false);
+
+                C.Log("Stopping role...");
                 base.OnStop();
+
+                C.Log("Role has shut down.");
             }
             catch (Exception ex)
             {

@@ -5,7 +5,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.WindowsAzure.Storage.Table;
 
-namespace Fetcher
+namespace Shared
 {
     public sealed class Storage
     {
@@ -57,10 +57,17 @@ namespace Fetcher
 
         public void SaveMessages(IEnumerable<PollTarget> targets)
         {
-            foreach (var t in targets)
-                AddMessage(t, (t.NextRun.HasValue) ? 
+            foreach (var t in targets) {
+                var ttl = (t.NextRun.HasValue) ? 
                     t.NextRun.Value.AddMinutes(1) - C.CurrTime() : 
-                    QUEUE_TTL);
+                    QUEUE_TTL;
+
+                if (ttl < QUEUE_TTL)
+                    ttl = QUEUE_TTL;
+
+                C.Log("Storing message for {0} ({1}) with ttl of {2}...", t.Name, t.Source, ttl);
+                AddMessage(t, ttl);
+            };
         }
 
         public void AddMessage(PollTarget t, TimeSpan ttl)
@@ -126,8 +133,9 @@ namespace Fetcher
                 {
                     RowKey = result.PartitionKey,
                     StatusCode = result.StatusCode,
-                    Content = FeedItem.FromXml(result.Content.ToString())
                 };
+
+            last.Content = FeedItem.FromXml(result.Content.ToString());
 
             var op = TableOperation.InsertOrReplace(last);
             lastResultTable.Execute(op);

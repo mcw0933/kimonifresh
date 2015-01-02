@@ -5,7 +5,7 @@ using System.Xml;
 using Argotic.Common;
 using Argotic.Syndication;
 
-namespace Fetcher
+namespace Shared
 {
     public class FeedItem
     {

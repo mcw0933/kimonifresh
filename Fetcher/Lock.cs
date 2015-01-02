@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Shared;
 namespace Fetcher
 {
     internal sealed class Lock

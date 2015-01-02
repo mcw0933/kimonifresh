@@ -8,7 +8,7 @@ using Argotic.Syndication;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Fetcher
+namespace Shared
 {
     public class Feed
     {

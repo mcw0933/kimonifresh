@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Web.Http;
-using Fetcher;
+using Shared;
 
 namespace API.Controllers
 {

@@ -5,7 +5,7 @@ using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Storage.Table;
 
-namespace Fetcher
+namespace Shared
 {
     public class C
     {
@@ -21,7 +21,7 @@ namespace Fetcher
 
         internal static string FormatErrorMsg(Exception ex)
         {
-            return ex.Message;
+            return ex.Message + "\r\n\tAt: " + ex.StackTrace.Split('\n')[0];
         }
 
         public static DateTimeOffset CurrTime()
@@ -34,9 +34,14 @@ namespace Fetcher
             return DateTimeOffset.UtcNow.Ticks.ToString("d19");
         }
 
-        internal static DateTimeOffset Localize(DateTimeOffset dt)
+        public static DateTimeOffset Localize(DateTimeOffset dt)
         {
             return dt.ToOffset(OFFSET);
+        }
+
+        public static string Localize(DateTimeOffset? dt)
+        {
+            return (dt.HasValue) ? Localize(dt.Value).ToString() : "(null)";
         }
 
         public static void Log(string message, Exception ex, params object[] values)
